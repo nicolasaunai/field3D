@@ -27,7 +27,7 @@ class Field3DC
 private:
     uint32 nx_, ny_, nz_;
     uint32 nynz;
-    xt::xarray<double, xt::layout_type::row_major> data_;
+    xt::xarray<double> data_;
 };
 
 #endif

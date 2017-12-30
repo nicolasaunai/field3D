@@ -66,15 +66,19 @@ public:
 
     PerfAnalyzer(int nx, int ny, int  nz,
                  int repeatTimes, int nbrParticles=2000000)
-    : field_{static_cast<uint32>(nx),static_cast<uint32>(ny),static_cast<uint32>(nz)}
+    : field_{static_cast<uint32>(nx)+1,static_cast<uint32>(ny)+1,static_cast<uint32>(nz)+1}
+    , gradFieldx_{static_cast<uint32>(nx),static_cast<uint32>(ny),static_cast<uint32>(nz)}
+    , gradFieldy_{static_cast<uint32>(nx),static_cast<uint32>(ny),static_cast<uint32>(nz)}
+    , gradFieldz_{static_cast<uint32>(nx),static_cast<uint32>(ny),static_cast<uint32>(nz)}
     , particles_(nbrParticles)
     , gen_(rd_())
-    , xdistr_{0, nx-1}
-    , ydistr_{0, ny-1}
-    , zdistr_{0, nz-1}
+    , xdistr_{0, nx}
+    , ydistr_{0, ny}
+    , zdistr_{0, nz}
     , repeatTimes_{repeatTimes}
     , readDurations_(repeatTimes)
     , writeDurations_(repeatTimes)
+    , gradDurations_(repeatTimes)
     {
         std::cout << field_.name() << "\n";
         initParticles();
@@ -134,18 +138,56 @@ public:
     }
 
 
+    double measureGrad()
+    {
+        int nx, ny, nz;
+        auto shape = gradFieldx_.shape();
+        nx = shape[0];
+        ny = shape[1];
+        nz = shape[2];
+        double dx = 0.1;
+
+        std::chrono::high_resolution_clock::time_point t1;
+        t1 = std::chrono::high_resolution_clock::now();
+        for (int i=0; i < nx; ++i)
+        {
+            for (int j=0; j < ny; ++j)
+            {
+                for (int k=0; k < nz; ++k)
+                {
+                    gradFieldx_(i,j,k) = dx*(field_(i+1,j,k) - field_(i,j,k));
+                    gradFieldy_(i,j,k) = dx*(field_(i,j+1,k) - field_(i,j,k));
+                    gradFieldz_(i,j,k) = dx*(field_(i,j,k+1) - field_(i,j,k));
+                }
+            }
+        }
+        std::chrono::high_resolution_clock::time_point t2;
+        t2 = std::chrono::high_resolution_clock::now();
+
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1 ).count();
+        readDurations_.push_back(duration);
+        return std::accumulate(std::begin(readDurations_), std::end(readDurations_), 0.0)/repeatTimes_;
+    }
+
+
     void analyze()
     {
         auto readTime  = measureRead();
         auto writeTime = measureWrite();
-        std::cout << readTime << "ms " <<  readTime/1e6 << "sec\n";
-        std::cout << writeTime << "ms " <<  writeTime/1e6 << "sec\n";
+        auto gradTime  = measureGrad();
+        std::cout << "random read access time  : " << readTime << "ms " <<  readTime/1e6 << "sec\n";
+        std::cout << "random write access time : " << writeTime << "ms " <<  writeTime/1e6 << "sec\n";
+        std::cout << "grad time access         : "  << gradTime << "ms " <<  gradTime/1e6 << "sec\n";
         std::cout << "-----------------------------------------------------\n";
     }
 
 private:
 
     Field field_;
+    Field gradFieldx_;
+    Field gradFieldy_;
+    Field gradFieldz_;
+
     std::vector<Particle> particles_;
     std::random_device rd_;
     std::mt19937 gen_;
@@ -153,6 +195,7 @@ private:
     int repeatTimes_;
     std::vector<double> readDurations_;
     std::vector<double> writeDurations_;
+    std::vector<double> gradDurations_;
     double tmpTotal_;
 
 };
@@ -167,7 +210,7 @@ int main()
   int nx= 20, ny=20, nz=20;
   int nbrParticlesPerCell = 100;
   int nbrParticles = nx*ny*nz*nbrParticlesPerCell;
-  int repeatTimes = 1000;
+  int repeatTimes = 10000;
 
   std::cout << "-----------------------------------------------------\n";
   std::cout << "Number of cells              : " << nx << ", " << ny << ", " << nz << "\n";
