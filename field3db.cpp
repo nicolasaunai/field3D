@@ -101,6 +101,11 @@ class Field3DB
         return data_[ k + j*nz_ + i*nynz ];
     }
 
+    double const& operator()(uint32 i, uint32 j, uint32 k) const
+    {
+        return data_[ k + j*nz_ + i*nynz ];
+    }
+
     std::array<std::size_t,3> shape() const {return std::array<std::size_t,3>{nx_, ny_, nz_};}
 
     ~Field3DB() = default;
@@ -261,7 +266,7 @@ int main()
 
  {
      std::cout << "Multiple allocations" << std::endl;
-     PerfAnalyzer<Field3DB> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
+     PerfAnalyzer<Field3DA> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
      auto readTime  = analyzer.measureRead();
      auto writeTime = analyzer.measureWrite();
      std::cout << readTime << "ms " <<  readTime/1e6 << "sec\n";
