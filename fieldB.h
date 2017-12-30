@@ -8,16 +8,16 @@ class Field3DB
     public:
 
     Field3DB(uint32 nx, uint32 ny, uint32 nz)
-    :nx_{nx}, ny_{ny}, nz_{nz}, nynz{ny*nz},data_(nx*ny*nz) {}
+    :nx_{nx}, ny_{ny}, nz_{nz},data_(nx*ny*nz) {}
 
     inline double& operator()(uint32 i, uint32 j, uint32 k)
     {
-        return data_[ k + j*nz_ + i*nynz ];
+        return data_[ k + (j + i*ny_)*nz_ ];
     }
 
     inline double const& operator()(uint32 i, uint32 j, uint32 k) const
     {
-        return data_[ k + j*nz_ + i*nynz ];
+        return data_[ k + (j + i*ny_)*nz_ ];
     }
 
     std::string name() {return "contiguous vector";}
@@ -29,7 +29,6 @@ class Field3DB
 
 private:
     uint32 nx_, ny_, nz_;
-    uint32 nynz;
     std::vector <double> data_;
 };
 

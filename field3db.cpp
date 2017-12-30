@@ -8,10 +8,15 @@
 #include <array>
 #include <random>
 #include <algorithm>
+#include <cstdlib>
 
 #include "fieldA.h"
 #include "fieldB.h"
+
+#ifdef XTENSOR
 #include "fieldC.h"
+#endif
+
 
 using uint32 = std::uint32_t;
 
@@ -376,9 +381,14 @@ private:
 
 
 
-int main()
+int main(int argc, char **argv)
 {
-  int nx= 20, ny=20, nz=20;
+  int nx, ny, nz;
+  nx = std::atoi(argv[1]);
+  ny = std::atoi(argv[2]);
+  nz = std::atoi(argv[3]);
+
+  //int nx= 20, ny=20, nz=20;
   int nbrParticlesPerCell = 100;
   int nbrParticles = nx*ny*nz*nbrParticlesPerCell;
   int repeatTimes = 1000;
@@ -407,13 +417,14 @@ int main()
 
  std::cout << "\n";
 
+#ifdef XTENSOR
  {
       PerfAnalyzer<Field3DC> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
       analyzer.analyze();
       std::ofstream file{"C.txt"};
       analyzer.show(file);
  }
-
+#endif
 
 
 }

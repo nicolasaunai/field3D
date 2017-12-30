@@ -17,6 +17,11 @@ class Field3DC
         return data_(i,j,k);
     }
 
+    inline double const& operator()(uint32 i, uint32 j, uint32 k) const
+    {
+        return data_(i,j,k);
+    }
+
     std::string name() {return "xtensor";}
 
     std::array<std::size_t,3> shape() const {return std::array<std::size_t,3>{nx_, ny_, nz_};}
