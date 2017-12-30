@@ -261,7 +261,7 @@ int main()
 {
   int nx= 20, ny=20, nz=20;
   int nbrParticles = nx*ny*nz*100;
-  int repeatTimes = 100;
+  int repeatTimes = 1000;
 
 
  {
