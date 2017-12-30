@@ -4,147 +4,279 @@
 #include <cstdint>
 #include <chrono>
 #include <fstream>
+#include <array>
+#include <random>
+#include <algorithm>
 
 using uint32 = std::uint32_t;
 
 
+// ---------------------------------------------------------------------------
+class Field3DA
+{
+private:
+
+     double* data_;
+     double ***data3D_;
+     uint32 nx_, ny_, nz_;
+
+public:
+
+     void allocate()
+     {
+         data_ = new double[nx_ * ny_ * nz_];
+         data3D_ = new double**[nx_];
+
+
+         for (uint32 i=0;  i < nx_; ++i)
+         {
+             data3D_[i] = new double*[ny_];
+             if (data3D_[i] == nullptr)
+             {
+                 throw std::runtime_error("Error");
+             }
+             for (uint32 j=0; j < ny_; ++j)
+             {
+                   data3D_[i][j] = data_ + i * nz_ * ny_ + j * nz_;
+             }
+         }
+     }
+
+
+     Field3DA(uint32 nx, uint32 ny, uint32 nz)
+        :data_{nullptr}, data3D_{nullptr},
+        nx_{nx},ny_{ny},nz_{nz}
+     {
+         allocate();
+     }
+
+
+     Field3DA(Field3DA const& source)
+     : data_{nullptr}, data3D_{nullptr}
+     , nx_{source.nx_}, ny_{source.ny_}, nz_{source.nz_}
+     {
+         allocate();
+         for (auto i=0; i < nx_*ny_*nz_; ++i)
+         {
+             data_[i] = source.data_[i];
+         }
+     }
+
+
+     std::array<std::size_t,3> shape() const {return std::array<std::size_t,3>{nx_, ny_, nz_};}
+
+
+     double& operator()(uint32 i, uint32 j, uint32 k)
+     {
+        return data3D_[i][j][k];
+     }
+
+     ~Field3DA()
+     {
+         for (uint32 i=0; i < nx_; ++i)
+         {
+             if (data3D_[i])
+                delete [] data3D_[i];
+            else
+                std::cout << "no need " << i << "\n";
+         }
+         delete [] data3D_;
+     }
+};
+// ---------------------------------------------------------------------------
+
+
+
+
+// ---------------------------------------------------------------------------
 class Field3DB
 {
-    private:
-    uint32 nx_, ny_, nz_;
-    uint32 nynz;
-    //std::vector < double > data_;
-
     public:
-    double *data_;
 
     Field3DB(uint32 nx, uint32 ny, uint32 nz)
-    :nx_{nx}, ny_{ny}, nz_{nz}, nynz{ny*nz}//,data_(nx*ny*nz)
-    {
-        data_ = new double [nx*ny*nz];
-    }
+    :nx_{nx}, ny_{ny}, nz_{nz}, nynz{ny*nz},data_(nx*ny*nz) {}
 
     double& operator()(uint32 i, uint32 j, uint32 k)
     {
-        return data_ [ k + j*nz_ + i*nynz ];
+        return data_[ k + j*nz_ + i*nynz ];
+    }
+
+    std::array<std::size_t,3> shape() const {return std::array<std::size_t,3>{nx_, ny_, nz_};}
+
+    ~Field3DB() = default;
+
+
+private:
+    uint32 nx_, ny_, nz_;
+    uint32 nynz;
+    std::vector <double> data_;
+};
+// ---------------------------------------------------------------------------
+
+
+
+
+template <typename Field>
+void init(Field& f)
+{
+    std::size_t nx, ny, nz;
+    auto shape = f.shape();
+    nx = shape[0];
+    ny = shape[1];
+    nz = shape[2];
+
+    for (std::size_t i=0; i < nx; ++i)
+    {
+        for ( uint32 j=0; j < ny; ++j)
+        {
+            for (uint32 k=0; k < nz; ++k)
+            {
+                f(i,j,k) = static_cast<double>(i + j + k);
+            }
+        }
+    }// end array loop
+}
+
+
+
+struct Particle
+{
+    uint32 i,j,k;
+};
+
+
+
+template <typename Field>
+class PerfAnalyzer
+{
+
+public:
+
+    void initParticles()
+    {
+        for (auto& particle : particles_)
+        {
+            particle.i = xdistr_(gen_);
+            particle.j = ydistr_(gen_);
+            particle.k = zdistr_(gen_);
+        }
+    }
+
+    PerfAnalyzer(int nx, int ny, int  nz,
+                 int repeatTimes, int nbrParticles=2000000)
+    : field_{static_cast<uint32>(nx),static_cast<uint32>(ny),static_cast<uint32>(nz)}
+    , particles_(nbrParticles)
+    , gen_(rd_())
+    , xdistr_{0, nx-1}
+    , ydistr_{0, ny-1}
+    , zdistr_{0, nz-1}
+    , repeatTimes_{repeatTimes}
+    , readDurations_(repeatTimes)
+    , writeDurations_(repeatTimes)
+    {
+        std::cout << "initializing particles...\n";
+        initParticles();
+        std::cout << "initializing field...\n";
+        init(field_);
+        std::cout << "initialization done...\n";
+    }
+
+    double measureWrite()
+    {
+        writeDurations_.clear();
+        for (int step = 0; step < repeatTimes_; ++step)
+        {
+            std::shuffle(std::begin(particles_), std::end(particles_), gen_);
+
+            std::chrono::high_resolution_clock::time_point t1;
+            t1 = std::chrono::high_resolution_clock::now();
+
+            for (auto const& particle : particles_)
+            {
+                field_(particle.i, particle.j, particle.k) = particle.i + particle.k;
+            }
+
+            std::chrono::high_resolution_clock::time_point t2;
+            t2 = std::chrono::high_resolution_clock::now();
+
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1 ).count();
+            writeDurations_.push_back(duration);
+        }
+
+        return std::accumulate(std::begin(writeDurations_), std::end(writeDurations_), 0.0)/repeatTimes_;
     }
 
 
-    ~Field3DB(){delete [] data_;}
+    double measureRead()
+    {
+        readDurations_.clear();
+        std::vector<double> measurements;
+        for (int step = 0; step < repeatTimes_; ++step)
+        {
+            std::shuffle(std::begin(particles_), std::end(particles_), gen_);
+
+            std::chrono::high_resolution_clock::time_point t1;
+            t1 = std::chrono::high_resolution_clock::now();
+
+            tmpTotal_ = 0.;
+            for (auto const& particle : particles_)
+            {
+                tmpTotal_ += field_(particle.i, particle.j, particle.k);
+            }
+
+            std::chrono::high_resolution_clock::time_point t2;
+            t2 = std::chrono::high_resolution_clock::now();
+
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1 ).count();
+            readDurations_.push_back(duration);
+        }
+        return std::accumulate(std::begin(readDurations_), std::end(readDurations_), 0.0)/repeatTimes_;
+    }
+
+private:
+
+    Field field_;
+    std::vector<Particle> particles_;
+    std::random_device rd_;
+    std::mt19937 gen_;
+    std::uniform_int_distribution<> xdistr_, ydistr_, zdistr_;
+    int repeatTimes_;
+    std::vector<double> readDurations_;
+    std::vector<double> writeDurations_;
+    double tmpTotal_;
+
 };
+
+
 
 
 
 
 int main()
 {
-  double dx=0.01, dy=0.02, dz=0.03;
-  uint32 nx=1000, ny=1000, nz=1000;
-  int ntot=2000000;
-  Field3DB fb{nx,ny,nz};
-  int repeatTimes = 10;
-  std::vector<double> assignTimes(repeatTimes);
-  std::vector<double> summationTimes(repeatTimes);
-  std::vector<double> totStore(repeatTimes);
-
-    std::cout << "PHARE-like" << std::endl;
-
-#if 0
-  for (uint32 i=0; i < nx; ++i)
-  {
-        for ( uint32 j=0; j < ny; ++j)
-        {
-                for (uint32 k=0; k < nz; ++k)
-                {
-                        fb(i,j,k) = dx*i + dy*j + dz*k;
-                }
-        }
-  }
-#endif
+  int nx= 20, ny=20, nz=20;
+  int nbrParticles = nx*ny*nz*100;
+  int repeatTimes = 100;
 
 
-    std::vector<uint32> ii(ntot);
-    std::vector<uint32> jj(ntot);
-    std::vector<uint32> kk(ntot);
+ {
+     std::cout << "Multiple allocations" << std::endl;
+     PerfAnalyzer<Field3DB> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
+     auto readTime  = analyzer.measureRead();
+     auto writeTime = analyzer.measureWrite();
+     std::cout << readTime << "ms " <<  readTime/1e6 << "sec\n";
+     std::cout << writeTime << "ms " <<  writeTime/1e6 << "sec\n";
+ }
 
-    for (int m=0; m <repeatTimes; ++m)
-    {
-        for (int n=0; n < ntot; ++n)
-        {
-            ii[n] = (rand() % (int)(nx));
-            jj[n] = (rand() % (int)(ny));
-            kk[n] = (rand() % (int)(nz));
-        }
+ std::cout << "\n";
 
+ {
+      std::cout << "Contiguous" << std::endl;
+      PerfAnalyzer<Field3DB> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
+      auto readTime  = analyzer.measureRead();
+      auto writeTime = analyzer.measureWrite();
+      std::cout << readTime << "ms " <<  readTime/1e6 << "sec\n";
+      std::cout << writeTime << "ms " <<  writeTime/1e6 << "sec\n";
+ }
 
-    std::cout << "iteration " << m << std::endl;
-
-    std::chrono::high_resolution_clock::time_point t1;
-    t1 = std::chrono::high_resolution_clock::now();
-
-    for (int n=0; n < ntot; ++n)
-    {
-        fb(ii[n],jj[n],kk[n]) = ii[n]+jj[n]+kk[n];
-    }
-
-  std::chrono::high_resolution_clock::time_point t2;
-  t2 = std::chrono::high_resolution_clock::now();
-
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-
-  //std::cout << "assignment time (run " << m <<" ) = "
-  //    << duration/1000000. << "sec" << std::endl;
-
-  assignTimes[m] = static_cast<double>(duration/1000000.);
-
-
-    double tot=0.;
-
-
-    t1 = std::chrono::high_resolution_clock::now();
-
-
-    for (int n=0; n < ntot; ++n)
-    {
-        tot+=fb(ii[n],jj[n],kk[n]);
-    }
-
-   t2 = std::chrono::high_resolution_clock::now();
-
-    duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-
-//std::cout << "summation time (run " << m <<" ) = " << duration/1000000. << "sec" << std::endl;
-  summationTimes[m] = static_cast<double>(duration/1000000.);
- //std::cout << "tot = " << tot << std::endl;
-   totStore[m] = tot;
-
-    }
-
-    std::ofstream f{"results_B.txt"};
-    double mean1=0., mean2=0.;
-    for (int m=0; m < repeatTimes; ++m)
-    {
-        std::cout << "( "<< assignTimes[m]
-                  << ", "<< summationTimes[m] << ") tot = " << totStore[m]<< std::endl;
-        f  <<  m << " " <<  assignTimes[m]
-                  << " "<< summationTimes[m]  << std::endl;
-        mean1+=assignTimes[m];
-        mean2+=summationTimes[m];
-    }
-
-    std::cout << "mean(assignment) = " << mean1/static_cast<double>(repeatTimes) << std::endl;
-    std::cout << "mean(summation)  = " << mean2/static_cast<double>(repeatTimes) << std::endl;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
