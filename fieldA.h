@@ -59,7 +59,7 @@ public:
      std::array<std::size_t,3> shape() const {return std::array<std::size_t,3>{nx_, ny_, nz_};}
 
 
-     double& operator()(uint32 i, uint32 j, uint32 k)
+     inline double& operator()(uint32 i, uint32 j, uint32 k)
      {
         return data3D_[i][j][k];
      }

@@ -12,7 +12,7 @@ class Field3DC
     Field3DC(uint32 nx, uint32 ny, uint32 nz)
     :nx_{nx}, ny_{ny}, nz_{nz}, nynz{ny*nz},data_{std::vector<std::size_t>{nx,ny,nz}} {}
 
-    double& operator()(uint32 i, uint32 j, uint32 k)
+    inline double& operator()(uint32 i, uint32 j, uint32 k)
     {
         return data_(i,j,k);
     }
@@ -27,7 +27,7 @@ class Field3DC
 private:
     uint32 nx_, ny_, nz_;
     uint32 nynz;
-    xt::xarray<double> data_;
+    xt::xarray<double, xt::layout_type::row_major> data_;
 };
 
 #endif
