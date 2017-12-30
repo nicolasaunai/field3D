@@ -20,6 +20,8 @@ class Field3DB
         return data_[ k + j*nz_ + i*nynz ];
     }
 
+    std::string name() {return "contiguous vector";}
+
     std::array<std::size_t,3> shape() const {return std::array<std::size_t,3>{nx_, ny_, nz_};}
 
     ~Field3DB() = default;

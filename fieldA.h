@@ -41,6 +41,8 @@ public:
          allocate();
      }
 
+     std::string name() {return "multiple allocations";}
+
 
      Field3DA(Field3DA const& source)
      : data_{nullptr}, data3D_{nullptr}

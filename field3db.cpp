@@ -10,6 +10,7 @@
 
 #include "fieldA.h"
 #include "fieldB.h"
+#include "fieldC.h"
 
 using uint32 = std::uint32_t;
 
@@ -75,11 +76,9 @@ public:
     , readDurations_(repeatTimes)
     , writeDurations_(repeatTimes)
     {
-        std::cout << "initializing particles...\n";
+        std::cout << field_.name() << "\n";
         initParticles();
-        std::cout << "initializing field...\n";
         init(field_);
-        std::cout << "initialization done...\n";
     }
 
     double measureWrite()
@@ -87,7 +86,7 @@ public:
         writeDurations_.clear();
         for (int step = 0; step < repeatTimes_; ++step)
         {
-            std::shuffle(std::begin(particles_), std::end(particles_), gen_);
+            //std::shuffle(std::begin(particles_), std::end(particles_), gen_);
 
             std::chrono::high_resolution_clock::time_point t1;
             t1 = std::chrono::high_resolution_clock::now();
@@ -114,7 +113,7 @@ public:
         std::vector<double> measurements;
         for (int step = 0; step < repeatTimes_; ++step)
         {
-            std::shuffle(std::begin(particles_), std::end(particles_), gen_);
+            //std::shuffle(std::begin(particles_), std::end(particles_), gen_);
 
             std::chrono::high_resolution_clock::time_point t1;
             t1 = std::chrono::high_resolution_clock::now();
@@ -132,6 +131,16 @@ public:
             readDurations_.push_back(duration);
         }
         return std::accumulate(std::begin(readDurations_), std::end(readDurations_), 0.0)/repeatTimes_;
+    }
+
+
+    void analyze()
+    {
+        auto readTime  = measureRead();
+        auto writeTime = measureWrite();
+        std::cout << readTime << "ms " <<  readTime/1e6 << "sec\n";
+        std::cout << writeTime << "ms " <<  writeTime/1e6 << "sec\n";
+        std::cout << "-----------------------------------------------------\n";
     }
 
 private:
@@ -156,28 +165,36 @@ private:
 int main()
 {
   int nx= 20, ny=20, nz=20;
-  int nbrParticles = nx*ny*nz*100;
+  int nbrParticlesPerCell = 100;
+  int nbrParticles = nx*ny*nz*nbrParticlesPerCell;
   int repeatTimes = 1000;
 
+  std::cout << "-----------------------------------------------------\n";
+  std::cout << "Number of cells              : " << nx << ", " << ny << ", " << nz << "\n";
+  std::cout << "Number of particles per cell : " << nbrParticlesPerCell << "\n";
+  std::cout << "Experiment repeated          : " << repeatTimes << " times\n";
+  std::cout << "-----------------------------------------------------\n\n\n";
 
  {
-     std::cout << "Multiple allocations" << std::endl;
      PerfAnalyzer<Field3DA> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
-     auto readTime  = analyzer.measureRead();
-     auto writeTime = analyzer.measureWrite();
-     std::cout << readTime << "ms " <<  readTime/1e6 << "sec\n";
-     std::cout << writeTime << "ms " <<  writeTime/1e6 << "sec\n";
+     analyzer.analyze();
+
  }
 
  std::cout << "\n";
 
  {
-      std::cout << "Contiguous" << std::endl;
       PerfAnalyzer<Field3DB> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
-      auto readTime  = analyzer.measureRead();
-      auto writeTime = analyzer.measureWrite();
-      std::cout << readTime << "ms " <<  readTime/1e6 << "sec\n";
-      std::cout << writeTime << "ms " <<  writeTime/1e6 << "sec\n";
+      analyzer.analyze();
  }
+
+ std::cout << "\n";
+
+ {
+      PerfAnalyzer<Field3DC> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
+      analyzer.analyze();
+ }
+
+
 
 }
