@@ -1,41 +1,69 @@
-COMPILE with Xtensor
-g++  -std=c++14 field3db.cpp -O3 -o analysis.exe -DXTENSOR
 
-COMPILE without Xtensor
-g++  -std=./analysis.exe 20 20 20
+compile with xtensor:
+```
+g++ -std=c++14 -O4 perfField3D.cpp -o analysis.exe -DXTENSOR
+```
+
+without xtensor:
+
+```
+g++ -std=c++14 -O4 perfField3D.cpp -o analysis.exe
+```
 
 
-Output :
+run :
+
+./analysis.exe 20 20 20
+
+```
 -----------------------------------------------------
 Number of cells              : 20, 20, 20
 Number of particles per cell : 100
-Experiment repeated          : 1000 times
+Experiment repeated          : 5000 times
 -----------------------------------------------------
 
 
+3 new
+random read access time  : 1675.53ms
+random write access time : 2300.89ms
+read access time         : 1493.19ms
+write access time        : 1421ms
+gradx time               : 8.7184ms
+grady time               : 9.718ms
+gradz time               : 9.261ms
+average time             : 18.4572ms
+-----------------------------------------------------
+
 multiple allocations
-random read access time  : 1809.21ms 0.00180921sec
-random write access time : 2368.81ms 0.00236881sec
-gradx time               : 10.459ms 1.0459e-05sec
-grady time               : 11.922ms 1.1922e-05sec
-gradz time               : 8.528ms 8.528e-06sec
-average time             : 19.14ms 1.914e-05sec
+random read access time  : 1737.98ms
+random write access time : 2325.1ms
+read access time         : 1560.24ms
+write access time        : 1501.17ms
+gradx time               : 6.5666ms
+grady time               : 8.6734ms
+gradz time               : 6.4144ms
+average time             : 16.4214ms
 -----------------------------------------------------
 
 contiguous vector
-random read access time  : 1576.58ms 0.00157658sec
-random write access time : 2293.83ms 0.00229383sec
-gradx time               : 11.485ms 1.1485e-05sec
-grady time               : 11.471ms 1.1471e-05sec
-gradz time               : 14.907ms 1.4907e-05sec
-average time             : 37.468ms 3.7468e-05sec
+random read access time  : 1461.82ms
+random write access time : 2298.86ms
+read access time         : 1406.62ms
+write access time        : 1528.81ms
+gradx time               : 12.4512ms
+grady time               : 12.9382ms
+gradz time               : 12.0328ms
+average time             : 38.7036ms
 -----------------------------------------------------
 
 xtensor
-random read access time  : 1795.66ms 0.00179566sec
-random write access time : 2298.61ms 0.00229861sec
-gradx time               : 48.411ms 4.8411e-05sec
-grady time               : 43.83ms 4.383e-05sec
-gradz time               : 33.907ms 3.3907e-05sec
-average time             : 85.575ms 8.5575e-05sec
+random read access time  : 1574.19ms
+random write access time : 2274.71ms
+read access time         : 1557.79ms
+write access time        : 1685.85ms
+gradx time               : 40.5252ms
+grady time               : 43.4696ms
+gradz time               : 39.9708ms
+average time             : 84.1964ms
 -----------------------------------------------------
+```
