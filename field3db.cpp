@@ -35,7 +35,7 @@ void init(Field& f)
     ny = shape[1];
     nz = shape[2];
 
-    for (std::size_t i=0; i < nx; ++i)
+    for (uint32 i=0; i < nx; ++i)
     {
         for ( uint32 j=0; j < ny; ++j)
         {
@@ -153,6 +153,7 @@ public:
     double measureGradX()
     {
         int nx, ny, nz;
+
         auto shape = gradFieldx_.shape();
 
         nx = shape[0];
@@ -240,6 +241,7 @@ public:
                 {
                     for (int k=0; k < nz; ++k)
                     {
+
                         gradFieldz_(i,j,k) = dx*(field_(i,j,k+1) - field_(i,j,k));
                     }
                 }
@@ -393,13 +395,23 @@ int main(int argc, char **argv)
 
   int nbrParticlesPerCell = 100;
   int nbrParticles = nx*ny*nz*nbrParticlesPerCell;
-  int repeatTimes = 10000;
+  int repeatTimes = 1000;
 
   std::cout << "-----------------------------------------------------\n";
   std::cout << "Number of cells              : " << nx << ", " << ny << ", " << nz << "\n";
   std::cout << "Number of particles per cell : " << nbrParticlesPerCell << "\n";
   std::cout << "Experiment repeated          : " << repeatTimes << " times\n";
   std::cout << "-----------------------------------------------------\n\n\n";
+
+  {
+       PerfAnalyzer<Field3DD> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
+       analyzer.analyze();
+       std::ofstream file{"D.txt"};
+       analyzer.show(file);
+  }
+
+  std::cout << "\n";
+
 
  {
      PerfAnalyzer<Field3DA> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
@@ -430,14 +442,6 @@ int main(int argc, char **argv)
 #endif
 
 
-{
-     PerfAnalyzer<Field3DD> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
-     analyzer.analyze();
-     std::ofstream file{"D.txt"};
-     analyzer.show(file);
-}
-
-std::cout << "\n";
 
 
 }

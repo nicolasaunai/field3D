@@ -9,16 +9,17 @@ private:
 
     void allocate()
     {
-        data3D_ = new double** [nz_];
-        data2D_ = new double* [nz_*ny_];
-        data_   = new double [nx_*ny_*nz_];
-
-        for (int i = 0; i < nz_; ++i )
+        data3D_ = new double** [nx_];
+        data2D_ = new double* [nx_* ny_];
+        data_   = new double [nx_* ny_* nz_];
+        
+        for (int i = 0; i < nx_; ++i )
         {
             data3D_[i] = data2D_ + i * ny_;
             for (int j = 0; j < ny_; ++j )
-                data3D_[i][j] = data_ + (i*ny_ + j)* nz_;
+                data3D_[i][j] = data_ + ( i * ny_ + j)* nz_;
         }
+
     }
 
 public:
