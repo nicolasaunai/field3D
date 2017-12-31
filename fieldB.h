@@ -10,12 +10,16 @@ class Field3DB
     Field3DB(uint32 nx, uint32 ny, uint32 nz)
     :nx_{nx}, ny_{ny}, nz_{nz},data_(nx*ny*nz) {}
 
-    inline double& operator()(uint32 i, uint32 j, uint32 k)
+    inline double& operator()(uint32 const i, uint32 const j, uint32 const k)
     {
+        //const int a = (j + i*ny_);
+        //const int b = a*nz_;
+        //const int c = k + b;
         return data_[ k + (j + i*ny_)*nz_ ];
-    }
+        //return data_[c];
+    }    
 
-    inline double const& operator()(uint32 i, uint32 j, uint32 k) const
+    inline double const& operator()(uint32 const i, uint32 const j, uint32 const k) const
     {
         return data_[ k + (j + i*ny_)*nz_ ];
     }

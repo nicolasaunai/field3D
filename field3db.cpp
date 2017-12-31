@@ -17,6 +17,8 @@
 #include "fieldC.h"
 #endif
 
+#include "fieldD.h"
+
 
 using uint32 = std::uint32_t;
 
@@ -310,6 +312,7 @@ public:
         std::cout << "gradz time               : "  << gradzTime << "ms " <<  gradzTime/1e6 << "sec\n";
         std::cout << "average time             : "  << avgTime << "ms " <<  avgTime/1e6 << "sec\n";
         std::cout << "-----------------------------------------------------\n";
+        //std::cout << field_(10,11,12) << "\n";
     }
 
 
@@ -388,10 +391,9 @@ int main(int argc, char **argv)
   ny = std::atoi(argv[2]);
   nz = std::atoi(argv[3]);
 
-  //int nx= 20, ny=20, nz=20;
   int nbrParticlesPerCell = 100;
   int nbrParticles = nx*ny*nz*nbrParticlesPerCell;
-  int repeatTimes = 1000;
+  int repeatTimes = 10000;
 
   std::cout << "-----------------------------------------------------\n";
   std::cout << "Number of cells              : " << nx << ", " << ny << ", " << nz << "\n";
@@ -424,7 +426,18 @@ int main(int argc, char **argv)
       std::ofstream file{"C.txt"};
       analyzer.show(file);
  }
+  std::cout << "\n";
 #endif
+
+
+{
+     PerfAnalyzer<Field3DD> analyzer{nx,ny,nz,repeatTimes, nbrParticles};
+     analyzer.analyze();
+     std::ofstream file{"D.txt"};
+     analyzer.show(file);
+}
+
+std::cout << "\n";
 
 
 }
