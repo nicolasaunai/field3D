@@ -395,7 +395,7 @@ int main(int argc, char **argv)
 
   int nbrParticlesPerCell = 100;
   int nbrParticles = nx*ny*nz*nbrParticlesPerCell;
-  int repeatTimes = 1000;
+  int repeatTimes = 10000;
 
   std::cout << "-----------------------------------------------------\n";
   std::cout << "Number of cells              : " << nx << ", " << ny << ", " << nz << "\n";
