@@ -74,7 +74,8 @@ public:
 
     PerfAnalyzer(int nx, int ny, int  nz,
                  int repeatTimes, int nbrParticles=2000000)
-    : field_{static_cast<uint32>(nx)+1,static_cast<uint32>(ny)+1,static_cast<uint32>(nz)+1}
+    :nx_{nx}, ny_{ny}, nz_{nz}
+    , field_{static_cast<uint32>(nx)+1,static_cast<uint32>(ny)+1,static_cast<uint32>(nz)+1}
     , gradFieldx_{static_cast<uint32>(nx),static_cast<uint32>(ny+1),static_cast<uint32>(nz+1)}
     , gradFieldy_{static_cast<uint32>(nx+1),static_cast<uint32>(ny),static_cast<uint32>(nz+1)}
     , gradFieldz_{static_cast<uint32>(nx+1),static_cast<uint32>(ny+1),static_cast<uint32>(nz)}
@@ -298,21 +299,45 @@ public:
         return std::accumulate(std::begin(cellAvgDurations_), std::end(cellAvgDurations_), 0.0)/repeatTimes_;
     }
 
+    void sortParticles()
+    {
+        std::sort(std::begin(particles_), std::end(particles_),
+                  [this](Particle const& part1, Particle const& part2)
+                  {
+                      auto ijk1 = part1.k + (part1.j + part1.i*this->ny_)*this->nz_;
+                      auto ijk2 = part2.k + (part2.j + part2.i*this->ny_)*this->nz_;
+                      return ijk1 < ijk2;
+                  });
+    }
+
+    void shuffleParticles()
+    {
+        std::shuffle(std::begin(particles_), std::end(particles_), gen_);
+    }
+
 
     void analyze()
     {
-        auto readTime  = measureRead();
-        auto writeTime = measureWrite();
+        sortParticles();
+        auto readTime   = measureRead();
+        auto writeTime  = measureWrite();
+
+        shuffleParticles();
+        auto randReadTime   = measureRead();
+        auto randWriteTime  = measureWrite();
+
         auto gradxTime  = measureGradX();
         auto gradyTime  = measureGradY();
         auto gradzTime  = measureGradZ();
         auto avgTime    = measureAvg();
-        std::cout << "random read access time  : " << readTime << "ms " <<  readTime/1e6 << "sec\n";
-        std::cout << "random write access time : " << writeTime << "ms " <<  writeTime/1e6 << "sec\n";
-        std::cout << "gradx time               : "  << gradxTime << "ms " <<  gradxTime/1e6 << "sec\n";
-        std::cout << "grady time               : "  << gradyTime << "ms " <<  gradyTime/1e6 << "sec\n";
-        std::cout << "gradz time               : "  << gradzTime << "ms " <<  gradzTime/1e6 << "sec\n";
-        std::cout << "average time             : "  << avgTime << "ms " <<  avgTime/1e6 << "sec\n";
+        std::cout << "random read access time  : " << randReadTime << "ms\n";
+        std::cout << "random write access time : " << randWriteTime << "ms\n";
+        std::cout << "read access time         : " << readTime << "ms\n";
+        std::cout << "write access time        : " << writeTime << "ms\n";
+        std::cout << "gradx time               : "  << gradxTime << "ms\n";
+        std::cout << "grady time               : "  << gradyTime << "ms\n";
+        std::cout << "gradz time               : "  << gradzTime << "ms\n";
+        std::cout << "average time             : "  << avgTime << "ms\n";
         std::cout << "-----------------------------------------------------\n";
         //std::cout << field_(10,11,12) << "\n";
     }
@@ -360,6 +385,7 @@ public:
 
 private:
 
+    int nx_, ny_, nz_;
     Field field_;
     Field gradFieldx_;
     Field gradFieldy_;
@@ -389,13 +415,20 @@ private:
 int main(int argc, char **argv)
 {
   int nx, ny, nz;
+
+  if (argc != 4)
+  {
+      std::cout << "usage : ./analyzer.exe nx ny nz\n";
+      exit(-1);
+  }
+
   nx = std::atoi(argv[1]);
   ny = std::atoi(argv[2]);
   nz = std::atoi(argv[3]);
 
   int nbrParticlesPerCell = 100;
   int nbrParticles = nx*ny*nz*nbrParticlesPerCell;
-  int repeatTimes = 10000;
+  int repeatTimes = 50000;
 
   std::cout << "-----------------------------------------------------\n";
   std::cout << "Number of cells              : " << nx << ", " << ny << ", " << nz << "\n";

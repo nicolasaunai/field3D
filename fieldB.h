@@ -12,12 +12,8 @@ class Field3DB
 
     inline double& operator()(uint32 const i, uint32 const j, uint32 const k)
     {
-        //const int a = (j + i*ny_);
-        //const int b = a*nz_;
-        //const int c = k + b;
         return data_[ k + (j + i*ny_)*nz_ ];
-        //return data_[c];
-    }    
+    }
 
     inline double const& operator()(uint32 const i, uint32 const j, uint32 const k) const
     {
