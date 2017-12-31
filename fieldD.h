@@ -29,7 +29,7 @@ public:
         allocate();
     }
 
-    Field3DA(Field3DA const& source)
+    Field3DD(Field3DD const& source)
     :nx_{source.nx_}, ny_{source.ny_}, nz_{source.nz_}
     {
         allocate();
